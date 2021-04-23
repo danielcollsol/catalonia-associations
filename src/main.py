@@ -1,38 +1,1 @@
-import pandas as pd
-from sodapy import Socrata
-
-def main():
-    catalonia_association_dataset = extract_data_from_transparencia_catalunya_api(dataset_identifier="y6fz-g3ff")
-    catalonia_association_dataset = filter_and_clean(catalonia_association_dataset)
-    barcelona_association_dataset = generate_barcelona_dataset(catalonia_association_dataset)
-
-def extract_data_from_transparencia_catalunya_api(dataset_identifier):
-    client = Socrata("analisi.transparenciacatalunya.cat", None)
-    results = client.get(dataset_identifier, limit=100000) #1000000
-    dataset = pd.DataFrame.from_records(results)
-    return dataset
-
-def filter_and_clean(dataset):
-    dataset = dataset.drop(["id_entitat","cif","num_inscripcio","fax"], axis=1)
-    dataset = dataset.rename(columns={"contingut_finalitats": "finalitat"})
-
-    colums_ordered = ['nom_entitat', 'tipus_entitat', 'data_inscripcio', 'adreca', 'nom_poblacio', 'codi_postal',
-                    'nom_provincia', 'nom_comarca', 'classificacio_general', 'classificacio_especifica',
-                    'telefon', 'fundadors', 'pagina_web', 'finalitat', 'finalitats2', 'finalitats3']
-    dataset = dataset[colums_ordered]
-    return dataset
-
-def generate_barcelona_dataset(dataset):
-    dataset = dataset[dataset.nom_poblacio == "Barcelona"]
-    #dataset = dataset[dataset['codi_postal'].str.contains("080")]
-
-    # postalcode_district_dict = {"08001": , "08002": , "08003": , "08004": , "08005": , "08006": , "08007": , "08008": ,
-    #                             "08009": , "08010": , "08011": , "08012": , "08013": , "08014": ,"08015": , "08016": ,
-    #                             "08017": , "08018": , "08019": , "08020": , "08021": , "08022": , "08023": ,
-    #                             "08024":, "08025": , "08026": , "08027": , "08028": , "08029": , "08030": , "08031": ,
-    # "08032":,  "08033": , "08034": , "08035": , "08036": ,"08037": , "08038": , "08039": }
-    # print(dataset)
-    dataset.to_csv("barcelona_dataset.csv", index=False)
-
-if __name__ == "__main__":
-    main()
+# Third party importsfrom pandas import DataFramefrom sodapy import Socrata# Local application importsfrom config import DB_CREDENTIALSfrom helper import load_df_to_postgresdef main():    catalonia_association_dataset = extract_data_from_transparencia_catalunya_api(dataset_identifier='y6fz-g3ff')    catalonia_association_dataset = filter_and_clean(catalonia_association_dataset)    load_to_db_barcelona_datasets(catalonia_association_dataset)def extract_data_from_transparencia_catalunya_api(dataset_identifier):    client = Socrata('analisi.transparenciacatalunya.cat', None)    results = client.get(dataset_identifier, limit=1000000)    dataset = DataFrame.from_records(results)    return datasetdef filter_and_clean(dataset):    dataset = dataset.drop(['cif','num_inscripcio','fax'], axis=1)    dataset = dataset.rename(columns={'contingut_finalitats': 'finalitat',                                      'id_entitat': 'id'})    colums_ordered = ['id', 'nom_entitat', 'tipus_entitat', 'data_inscripcio', 'adreca', 'nom_poblacio', 'codi_postal',                    'nom_provincia', 'nom_comarca', 'classificacio_general', 'classificacio_especifica',                    'telefon', 'fundadors', 'pagina_web', 'finalitat', 'finalitats2', 'finalitats3']    dataset = dataset[colums_ordered]    return datasetdef load_to_db_barcelona_datasets(dataset):    dataset = dataset[dataset['nom_poblacio'] == "Barcelona"]    dataset = dataset.sort_values(by=['codi_postal'])    districts_postal_codes_dict = {        'ciutat_vella': ["08001", "08002", "08003"],        'eixample': ['08007', '08008', '08009', '08010', '08011', '08013', '08015','08018', '08025', '08029', '08036', '08037'],        'sants_montjuic': ['08004', '08014', '08038', '08039', '08040'],        'les_corts': ['08028', '08029', '08034'],        'sarria_sant_gervasi': ['08006', '08017', '08021', '08022'],        'gracia': ['08012', '08023', '08024', '08025', '08035'],        'horta_guinardo': ['08025',' 08031', '08032', '08035', '08042'],        'nou_barris': ['08016', '08031', '08033', '08042'],        'sant_andreu': ['08027', '08030', '08033'],        'sant_marti': ['08005', '08018', '08019', '08020', '08041']    }    db_schema = 'catalonia_associations'    for district in districts_postal_codes_dict:        district_dataset = dataset[dataset['codi_postal'].isin(districts_postal_codes_dict[district])]        load_df_to_postgres(district_dataset, DB_CREDENTIALS, db_schema, district)if __name__ == "__main__":    main()
