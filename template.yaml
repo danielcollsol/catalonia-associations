@@ -44,7 +44,7 @@ Resources:
         CloudWatchScheduler:
           Type: Schedule
           Properties:
-            Schedule: "rate(3 hours)"
+            Schedule: "cron(0 8 1 * ? *)"
             Name: ETL
             Description: Description Catalonia Association schedule
             Enabled: true
