@@ -1,4 +1,5 @@
 from sqlalchemy import create_engine
+import psycopg2
 
 
 def load_df_to_postgres(dataframe, db_config, schema, table_name):
